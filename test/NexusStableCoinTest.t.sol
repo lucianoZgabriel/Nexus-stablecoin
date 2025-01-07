@@ -42,17 +42,13 @@ contract NexusStableCoinTest is Test {
 
     function test_RevertMint_WhenMintingToZeroAddress() public {
         vm.prank(owner);
-        vm.expectRevert(
-            NexusStableCoin.NexusStableCoin__MustBeAValidAddress.selector
-        );
+        vm.expectRevert(NexusStableCoin.NexusStableCoin__MustBeAValidAddress.selector);
         nexusStableCoin.mint(address(0), MINT_AMOUNT);
     }
 
     function test_RevertMint_WhenMintingZeroAmount() public {
         vm.prank(owner);
-        vm.expectRevert(
-            NexusStableCoin.NexusStableCoin__MustBeMoreThanZero.selector
-        );
+        vm.expectRevert(NexusStableCoin.NexusStableCoin__MustBeMoreThanZero.selector);
         nexusStableCoin.mint(user, 0);
     }
 
@@ -64,10 +60,7 @@ contract NexusStableCoinTest is Test {
         uint256 ownerBalanceBefore = nexusStableCoin.balanceOf(owner);
 
         nexusStableCoin.burn(BURN_AMOUNT);
-        assertEq(
-            nexusStableCoin.balanceOf(owner),
-            ownerBalanceBefore - BURN_AMOUNT
-        );
+        assertEq(nexusStableCoin.balanceOf(owner), ownerBalanceBefore - BURN_AMOUNT);
         vm.stopPrank();
     }
 
@@ -78,18 +71,14 @@ contract NexusStableCoinTest is Test {
 
     function test_RevertBurn_WhenBurningZeroAmount() public {
         vm.prank(owner);
-        vm.expectRevert(
-            NexusStableCoin.NexusStableCoin__MustBeMoreThanZero.selector
-        );
+        vm.expectRevert(NexusStableCoin.NexusStableCoin__MustBeMoreThanZero.selector);
         nexusStableCoin.burn(0);
     }
 
     function test_RevertBurn_WhenBurningMoreThanBalance() public {
         vm.startPrank(owner);
         nexusStableCoin.mint(owner, STARTING_BALANCE);
-        vm.expectRevert(
-            NexusStableCoin.NexusStableCoin__BurnAmountExceedsBalance.selector
-        );
+        vm.expectRevert(NexusStableCoin.NexusStableCoin__BurnAmountExceedsBalance.selector);
         nexusStableCoin.burn(STARTING_BALANCE + 1);
         vm.stopPrank();
     }
