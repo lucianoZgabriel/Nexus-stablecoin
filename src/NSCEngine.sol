@@ -26,7 +26,7 @@ import {NexusStableCoin} from "./NexusStableCoin.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {IERC20} from "@openzeppelin/contracts/interfaces/IERC20.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
-
+import {OracleLib} from "./libraries/OracleLib.sol";
 /**
  * @title NSCEngine
  * @author Luciano Zanin Gabriel
@@ -47,6 +47,7 @@ import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/interfaces/Ag
  * @notice This contract is the core of the NSC System. It handles all the logic for minting and burning NSC, as well asa depositing and withdrawing collateral.
  * @notice This contract is loosely based on the MakerDAO DSS system.
  */
+
 contract NSCEngine is ReentrancyGuard {
     ////////////////////////
     /////// Errors /////////
@@ -60,6 +61,11 @@ contract NSCEngine is ReentrancyGuard {
     error NSCEngine__HealthFactorIsBroken(uint256 healthFactor);
     error NSCEngine__HealthFactorOk();
     error NSCEngine__HealthFactorNotImproved();
+
+    ////////////////////////
+    /////// Types /////////
+    ////////////////////////
+    using OracleLib for AggregatorV3Interface;
 
     ////////////////////////
     /////// State /////////
@@ -324,13 +330,13 @@ contract NSCEngine is ReentrancyGuard {
 
     function getUsdValue(address token, uint256 amount) public view returns (uint256) {
         AggregatorV3Interface priceFeed = AggregatorV3Interface(s_priceFeeds[token]);
-        (, int256 price,,,) = priceFeed.latestRoundData();
+        (, int256 price,,,) = priceFeed.staleCheckLatestRoundData();
         return (uint256(price) * ADDITIONAL_FEED_PRECISION * amount) / PRECISION_FACTOR;
     }
 
     function getTokenAmountFromUsd(address token, uint256 usdAmountInWei) public view returns (uint256) {
         AggregatorV3Interface priceFeed = AggregatorV3Interface(s_priceFeeds[token]);
-        (, int256 price,,,) = priceFeed.latestRoundData();
+        (, int256 price,,,) = priceFeed.staleCheckLatestRoundData();
         return (usdAmountInWei * PRECISION_FACTOR) / (uint256(price) * ADDITIONAL_FEED_PRECISION);
     }
 

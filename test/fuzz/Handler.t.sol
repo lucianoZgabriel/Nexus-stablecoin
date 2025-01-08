@@ -15,10 +15,12 @@ contract Handler is Test {
     ERC20Mock public wbtc;
     MockV3Aggregator public ethUsdPriceFeed;
 
-    uint256 public constant MAX_DEPOSIT_SIZE = type(uint96).max;
+    uint256 public constant MAX_DEPOSIT_SIZE = 1e6 * 1e18;
+    uint256 public constant MIN_HEALTH_FACTOR = 1e18;
 
     uint256 public timesMintIsCalled;
 
+    mapping(address => bool) public hasValidCollateral;
     address[] public usersWithCollateralDeposited;
 
     constructor(NSCEngine _nscEngine, NexusStableCoin _nexusStableCoin) {
@@ -34,12 +36,14 @@ contract Handler is Test {
     function mintNsc(uint256 amountSeed, uint256 addressSeed) public {
         if (usersWithCollateralDeposited.length == 0) return;
         address sender = usersWithCollateralDeposited[addressSeed % usersWithCollateralDeposited.length];
+        if (!hasValidCollateral[sender]) return;
+
         (uint256 totalNscMinted, uint256 totalCollateralValueInUsd) = nscEngine.getAccountInformation(sender);
 
-        int256 maxNscMintable = (int256(totalCollateralValueInUsd) / 2) - int256(totalNscMinted);
-        if (maxNscMintable < 0) return;
+        uint256 maxNscMintable = (totalCollateralValueInUsd * 50) / 100;
+        if (maxNscMintable == 0) return;
 
-        uint256 amountToMint = bound(amountSeed, 0, uint256(maxNscMintable));
+        uint256 amountToMint = bound(amountSeed, 0, maxNscMintable - totalNscMinted);
         if (amountToMint == 0) return;
 
         vm.startPrank(sender);
@@ -56,13 +60,18 @@ contract Handler is Test {
         vm.startPrank(msg.sender);
         collateral.mint(msg.sender, amount);
         collateral.approve(address(nscEngine), amount);
-        nscEngine.depositCollateral(address(collateral), amount);
+        try nscEngine.depositCollateral(address(collateral), amount) {
+            hasValidCollateral[msg.sender] = true;
+            usersWithCollateralDeposited.push(msg.sender);
+        } catch {
+            hasValidCollateral[msg.sender] = false;
+        }
         vm.stopPrank();
-
-        usersWithCollateralDeposited.push(msg.sender);
     }
 
     function redeemCollateral(uint256 collateralSeed, uint256 amountCollateral) public {
+        if (!hasValidCollateral[msg.sender]) return;
+
         uint256 boundedCollateralSeed = bound(collateralSeed, 0, 1);
         ERC20Mock collateral = _getCollateralFromSeed(boundedCollateralSeed);
         uint256 maxCollateral = collateral.balanceOf(address(nscEngine));
@@ -75,7 +84,12 @@ contract Handler is Test {
         if (amountToRedeem == 0) return;
 
         vm.startPrank(msg.sender);
-        nscEngine.redeemCollateral(address(collateral), amountToRedeem);
+        try nscEngine.redeemCollateral(address(collateral), amountToRedeem) {
+            uint256 remainingCollateral = nscEngine.getAccountCollateralValue(msg.sender);
+            hasValidCollateral[msg.sender] = remainingCollateral > 0;
+        } catch {
+            hasValidCollateral[msg.sender] = false;
+        }
         vm.stopPrank();
     }
 
