@@ -333,4 +333,44 @@ contract NSCEngine is ReentrancyGuard {
         (, int256 price,,,) = priceFeed.latestRoundData();
         return (usdAmountInWei * PRECISION_FACTOR) / (uint256(price) * ADDITIONAL_FEED_PRECISION);
     }
+
+    function getCollateralTokens() public view returns (address[] memory) {
+        return s_collateralTokens;
+    }
+
+    function getCollateralBalanceOfUser(address user, address token) external view returns (uint256) {
+        return s_collateralDeposited[user][token];
+    }
+
+    function getAccountInformation(address user)
+        external
+        view
+        returns (uint256 totalNscMinted, uint256 totalCollateralValueInUsd)
+    {
+        (totalNscMinted, totalCollateralValueInUsd) = _getAccountInformation(user);
+    }
+
+    function getCollateralTokenPriceFeed(address token) external view returns (address) {
+        return s_priceFeeds[token];
+    }
+
+    function getNscAddress() external view returns (address) {
+        return address(i_nsc);
+    }
+
+    function getLiquidationThreshold() external pure returns (uint256) {
+        return LIQUIDATION_THRESHOLD;
+    }
+
+    function getLiquidationBonus() external pure returns (uint256) {
+        return LIQUIDATION_BONUS;
+    }
+
+    function getMinHealthFactor() external pure returns (uint256) {
+        return MIN_HEALTH_FACTOR;
+    }
+
+    function getPrecision() external pure returns (uint256) {
+        return PRECISION_FACTOR;
+    }
 }
